@@ -2,7 +2,7 @@
 version: 2.1
 
 orbs:
-  codecov: codecov/codecov@3.3.0
+  codecov: codecov/codecov@3.0.0
   gcloud: circleci/gcp-cli@2.1.0
   gh: circleci/github-cli@2.0
   helm: circleci/helm@1.2.0
@@ -25,7 +25,7 @@ executors:
 parameters:
   det-version:
     type: string
-    default: 0.26.7-dev0
+    default: 0.26.8-dev0
   docker-image:
     type: string
     default: determinedai/cimg-base:latest
@@ -1215,28 +1215,28 @@ jobs:
   # TODO(danh): eventually replace 'publish-docs' with this new workflow after
   # all dependent scripts are updated.
   # Related work: https://hpe-aiatscale.atlassian.net/browse/INFENG-183
-  # publish-docs-new:
-  #   parameters:
-  #     preview:
-  #       type: boolean
-  #       default: true
-  #   docker:
-  #     - image: <<pipeline.parameters.docker-image>>
-  #   steps:
-  #     - checkout
-  #     - skip-if-not-docs
-  #     - attach_workspace:
-  #         at: .
-  #     - setup-python-venv:
-  #         install-python: false
-  #         determined: true
-  #         model-hub: true
-  #         extra-requirements-file: "docs/requirements.txt"
-  #         executor: <<pipeline.parameters.docker-image>>
-  #     - when:
-  #         condition: <<parameters.preview>>
-  #         steps:
-  #           - run: make -C docs preview
+  publish-docs-new:
+    parameters:
+      preview:
+        type: boolean
+        default: true
+    docker:
+      - image: <<pipeline.parameters.docker-image>>
+    steps:
+      - checkout
+      - skip-if-not-docs
+      - attach_workspace:
+          at: .
+      - setup-python-venv:
+          install-python: false
+          determined: true
+          model-hub: true
+          extra-requirements-file: "docs/requirements.txt"
+          executor: <<pipeline.parameters.docker-image>>
+      - when:
+          condition: <<parameters.preview>>
+          steps:
+            - run: make -C docs preview
 
   package-and-push-system-local:
     docker:
@@ -1673,9 +1673,6 @@ jobs:
           executor: <<pipeline.parameters.machine-image>>
       - setup-go-intg-deps
       - run: make -C master test-intg
-      - codecov/upload:
-          flags: "backend"
-          xtra_args: "-v"
       - store_test_results:
           path: master/test-intg.junit.xml
       - persist_to_workspace:
@@ -1699,9 +1696,6 @@ jobs:
           executor: <<pipeline.parameters.machine-image>>
       - setup-go-intg-deps
       - run: make -C agent test-intg
-      - codecov/upload:
-          flags: "backend"
-          xtra_args: "-v"
       - store_test_results:
           path: agent/test-intg.junit.xml
       - persist_to_workspace:
@@ -1780,25 +1774,25 @@ jobs:
       - run: git secrets --add '"private_key":\s"-----BEGIN\sPRIVATE\sKEY-----'
       - run: git secrets --scan-history
 
-  # lint-python:
-  #   docker:
-  #     - image: <<pipeline.parameters.docker-image>>
-  #   steps:
-  #     - checkout
-  #     - skip-if-docs-only
-  #     - skip-if-github-only
-  #     - skip-if-webui-only
-  #     - setup-python-venv:
-  #         install-python: false
-  #         determined: true
-  #         model-hub: true
-  #         extra-requirements-file: "requirements.txt"
-  #         executor: <<pipeline.parameters.docker-image>>
-  #     - run: make -C harness check
-  #     - run: make -C model_hub check
-  #     - run: make -C e2e_tests check
-  #     - run: make -C tools check
-  #     - run: make -C schemas check
+  lint-python:
+    docker:
+      - image: <<pipeline.parameters.docker-image>>
+    steps:
+      - checkout
+      - skip-if-docs-only
+      - skip-if-github-only
+      - skip-if-webui-only
+      - setup-python-venv:
+          install-python: false
+          determined: true
+          model-hub: true
+          extra-requirements-file: "requirements.txt"
+          executor: <<pipeline.parameters.docker-image>>
+      - run: make -C harness check
+      - run: make -C model_hub check
+      - run: make -C e2e_tests check
+      - run: make -C tools check
+      - run: make -C schemas check
 
   test-unit-harness-cpu:
     docker:
@@ -2022,574 +2016,574 @@ jobs:
           path: cov-html
           destination: cov-html
 
-  # test-cli:
-  #   parameters:
-  #     executor-name:
-  #       type: string
-  #   executor: << parameters.executor-name >>
-  #   steps:
-  #     - checkout
-  #     - run: python --version
-  #     # Running the pip executable causes an error with the win/default executor for some reason.
-  #     - run: python -m pip install --upgrade --user pip
-  #     - run: pip --version
-  #     - run: pip install wheel
-  #     - run: cd harness; python setup.py bdist_wheel -d ../build
-  #     - run: pip install --find-links build determined==<< pipeline.parameters.det-version >>
-  #     - run: pip freeze --all
-  #     # Allow this to fail, but it is useful for debugging.
-  #     - run: sh -c "pip check || true"
-  #     # Ensure Determined cli can run without installing cli test requirements
-  #     - run: det --help
-  #     - run: pip install setuptools_scm
-  #     - run: pip install -r harness/tests/requirements/requirements-cli.txt
-  #     - run: pip freeze --all
-  #     - run: sh -c "pip check || true"
-  #     - run: pytest harness/tests/cli
+  test-cli:
+    parameters:
+      executor-name:
+        type: string
+    executor: << parameters.executor-name >>
+    steps:
+      - checkout
+      - run: python --version
+      # Running the pip executable causes an error with the win/default executor for some reason.
+      - run: python -m pip install --upgrade --user pip
+      - run: pip --version
+      - run: pip install wheel
+      - run: cd harness; python setup.py bdist_wheel -d ../build
+      - run: pip install --find-links build determined==<< pipeline.parameters.det-version >>
+      - run: pip freeze --all
+      # Allow this to fail, but it is useful for debugging.
+      - run: sh -c "pip check || true"
+      # Ensure Determined cli can run without installing cli test requirements
+      - run: det --help
+      - run: pip install setuptools_scm
+      - run: pip install -r harness/tests/requirements/requirements-cli.txt
+      - run: pip freeze --all
+      - run: sh -c "pip check || true"
+      - run: pytest harness/tests/cli
 
-#   test-e2e:
-#     parameters:
-#       tf2:
-#         type: boolean
-#         default: false
-#       mark:
-#         type: string
-#       parallelism:
-#         type: integer
-#       devcluster-config:
-#         type: string
-#         default: double.devcluster.yaml
-#       target-stage:
-#         type: string
-#         default: agent1
-#       managed-devcluster:
-#         type: boolean
-#         default: false
-#       postgres-version:
-#         type: string
-#         default: "10"
-#       agent-version:
-#         type: string
-#         default: ""
-#       extra-pytest-flags:
-#         type: string
-#         default: ""
-#       wait-for-master:
-#         type: boolean
-#         default: true
-#     machine:
-#       image: <<pipeline.parameters.machine-image>>
-#     resource_class: xlarge
-#     parallelism: <<parameters.parallelism>>
-#     environment:
-#       DET_POSTGRES_VERSION: <<parameters.postgres-version>>
-#       DET_AGENT_VERSION: <<parameters.agent-version>>
-#     steps:
-#       - checkout
-#       - skip-if-docs-only
-#       - skip-if-github-only
-#       - skip-if-webui-only
-#       - attach_workspace:
-#           at: .
+  test-e2e:
+    parameters:
+      tf2:
+        type: boolean
+        default: false
+      mark:
+        type: string
+      parallelism:
+        type: integer
+      devcluster-config:
+        type: string
+        default: double.devcluster.yaml
+      target-stage:
+        type: string
+        default: agent1
+      managed-devcluster:
+        type: boolean
+        default: false
+      postgres-version:
+        type: string
+        default: "10"
+      agent-version:
+        type: string
+        default: ""
+      extra-pytest-flags:
+        type: string
+        default: ""
+      wait-for-master:
+        type: boolean
+        default: true
+    machine:
+      image: <<pipeline.parameters.machine-image>>
+    resource_class: xlarge
+    parallelism: <<parameters.parallelism>>
+    environment:
+      DET_POSTGRES_VERSION: <<parameters.postgres-version>>
+      DET_AGENT_VERSION: <<parameters.agent-version>>
+    steps:
+      - checkout
+      - skip-if-docs-only
+      - skip-if-github-only
+      - skip-if-webui-only
+      - attach_workspace:
+          at: .
 
-#       - setup-python-venv:
-#           determined: True
-#           extra-requirements-file: "e2e_tests/tests/requirements.txt"
-#           executor: <<pipeline.parameters.machine-image>>
+      - setup-python-venv:
+          determined: True
+          extra-requirements-file: "e2e_tests/tests/requirements.txt"
+          executor: <<pipeline.parameters.machine-image>>
 
-#       - install-devcluster
-#       - unless:
-#           condition: <<parameters.managed-devcluster>>
-#           steps:
-#             - start-devcluster:
-#                 devcluster-config: <<parameters.devcluster-config>>
-#                 target-stage: <<parameters.target-stage>>
+      - install-devcluster
+      - unless:
+          condition: <<parameters.managed-devcluster>>
+          steps:
+            - start-devcluster:
+                devcluster-config: <<parameters.devcluster-config>>
+                target-stage: <<parameters.target-stage>>
 
-#       - pull-task-images:
-#           tf2: <<parameters.tf2>>
+      - pull-task-images:
+          tf2: <<parameters.tf2>>
 
-#       - run-e2e-tests:
-#           mark: <<parameters.mark>>
-#           master-host: localhost
-#           managed-devcluster: <<parameters.managed-devcluster>>
-#           extra-pytest-flags: <<parameters.extra-pytest-flags>>
-#           wait-for-master: <<parameters.wait-for-master>>
+      - run-e2e-tests:
+          mark: <<parameters.mark>>
+          master-host: localhost
+          managed-devcluster: <<parameters.managed-devcluster>>
+          extra-pytest-flags: <<parameters.extra-pytest-flags>>
+          wait-for-master: <<parameters.wait-for-master>>
 
-#       - store_test_results:
-#           path: /tmp/test-results/
+      - store_test_results:
+          path: /tmp/test-results/
 
-#       - when:
-#           condition: <<parameters.managed-devcluster>>
-#           steps:
-#             - store_artifacts:
-#                 path: /tmp/devcluster/
-#                 destination: devcluster-logs
-#             - store_artifacts:
-#                 path: /tmp/priority_scheduler
-#                 destination: devcluster-priority_scheduler-logs
+      - when:
+          condition: <<parameters.managed-devcluster>>
+          steps:
+            - store_artifacts:
+                path: /tmp/devcluster/
+                destination: devcluster-logs
+            - store_artifacts:
+                path: /tmp/priority_scheduler
+                destination: devcluster-priority_scheduler-logs
 
-#   deploy:
-#     parameters:
-#       compute-agent-instance-type:
-#         type: string
-#         default: "g4dn.xlarge"
-#       aux-agent-instance-type:
-#         type: string
-#         default: "m5.large"
-#       cluster-id:
-#         type: string
-#         default: determined-${CIRCLE_BRANCH////--}
-#       max-dynamic-agents:
-#         type: integer
-#         default: 1
-#       enable-cors:
-#         type: boolean
-#         default: false
-#       reattach-enabled:
-#         type: boolean
-#         default: false
-#     docker:
-#       - image: <<pipeline.parameters.docker-image>>
-#     steps:
-#       - queue/until_front_of_line:
-#           only-on-branch: main
-#           # Basically wait forever -- we would prefer not to fail deploys, and
-#           # we'll likely never be this backed up.
-#           time: "10000"
-#       - checkout
-#       - set-slack-user-id
-#       - setup-python-venv:
-#           install-python: false
-#           determined: true
-#           executor: <<pipeline.parameters.docker-image>>
-#       - deploy-aws-cluster:
-#           cluster-id: <<parameters.cluster-id>>
-#           det-version: ${CIRCLE_SHA1}
-#           compute-agent-instance-type: <<parameters.compute-agent-instance-type>>
-#           aux-agent-instance-type: <<parameters.aux-agent-instance-type>>
-#           max-dynamic-agents: <<parameters.max-dynamic-agents>>
-#           enable-cors: <<parameters.enable-cors>>
-#           reattach-enabled: <<parameters.reattach-enabled>>
-#           deployment-type: simple
-#       - slack/status:
-#           fail_only: true
-#           failure_message: ':thisisfine: A \`${CIRCLE_JOB}\` job on branch \`${CIRCLE_BRANCH}\` has failed! Author Email: \`${AUTHOR_EMAIL}\`'
-#           mentions: "${SLACK_USER_ID}"
+  deploy:
+    parameters:
+      compute-agent-instance-type:
+        type: string
+        default: "g4dn.xlarge"
+      aux-agent-instance-type:
+        type: string
+        default: "m5.large"
+      cluster-id:
+        type: string
+        default: determined-${CIRCLE_BRANCH////--}
+      max-dynamic-agents:
+        type: integer
+        default: 1
+      enable-cors:
+        type: boolean
+        default: false
+      reattach-enabled:
+        type: boolean
+        default: false
+    docker:
+      - image: <<pipeline.parameters.docker-image>>
+    steps:
+      - queue/until_front_of_line:
+          only-on-branch: main
+          # Basically wait forever -- we would prefer not to fail deploys, and
+          # we'll likely never be this backed up.
+          time: "10000"
+      - checkout
+      - set-slack-user-id
+      - setup-python-venv:
+          install-python: false
+          determined: true
+          executor: <<pipeline.parameters.docker-image>>
+      - deploy-aws-cluster:
+          cluster-id: <<parameters.cluster-id>>
+          det-version: ${CIRCLE_SHA1}
+          compute-agent-instance-type: <<parameters.compute-agent-instance-type>>
+          aux-agent-instance-type: <<parameters.aux-agent-instance-type>>
+          max-dynamic-agents: <<parameters.max-dynamic-agents>>
+          enable-cors: <<parameters.enable-cors>>
+          reattach-enabled: <<parameters.reattach-enabled>>
+          deployment-type: simple
+      - slack/status:
+          fail_only: true
+          failure_message: ':thisisfine: A \`${CIRCLE_JOB}\` job on branch \`${CIRCLE_BRANCH}\` has failed! Author Email: \`${AUTHOR_EMAIL}\`'
+          mentions: "${SLACK_USER_ID}"
 
-#   test-e2e-aws:
-#     parameters:
-#       cluster-id-prefix:
-#         type: string
-#       mark:
-#         type: string
-#       compute-agent-instance-type:
-#         type: string
-#         default: g4dn.xlarge
-#       aux-agent-instance-type:
-#         type: string
-#         default: m5.large
-#       max-dynamic-agents:
-#         type: integer
-#         default: 1
-#       parallelism:
-#         type: integer
-#         default: 1
-#       enable-tls:
-#         type: boolean
-#         default: false
-#       slack-mentions:
-#         type: string
-#         default: ""
-#       slack-channel:
-#         type: string
-#         default: ""
-#       environment-gpu-enabled:
-#         type: string
-#         default: "1"
-#     environment:
-#       DET_TEST_GPU_ENABLED: <<parameters.environment-gpu-enabled>>
-#     docker:
-#       - image: <<pipeline.parameters.docker-image>>
-#     parallelism: <<parameters.parallelism>>
-#     steps:
-#       - checkout
-#       - skip-if-docs-only
-#       - skip-if-github-only
-#       - skip-if-webui-only
-#       - set-slack-user-id
-#       - setup-python-venv:
-#           install-python: false
-#           determined: true
-#           extra-requirements-file: "e2e_tests/tests/requirements.txt"
-#           executor: <<pipeline.parameters.docker-image>>
-#       - when:
-#           condition: <<parameters.enable-tls>>
-#           steps:
-#             - generate-tls-cert
-#       - setup-aws-cluster:
-#           cluster-id: <<parameters.cluster-id-prefix>>-$(git rev-parse --short HEAD)-${CIRCLE_BUILD_NUM}-${CIRCLE_NODE_INDEX}
-#           extra-tags: test-mark=<<parameters.mark>>
-#           det-version: ${CIRCLE_SHA1}
-#           aux-agent-instance-type: <<parameters.aux-agent-instance-type>>
-#           compute-agent-instance-type: <<parameters.compute-agent-instance-type>>
-#           max-dynamic-agents: <<parameters.max-dynamic-agents>>
-#           master-tls-cert: ${MASTER_TLS_CERT}
-#           master-tls-key: ${MASTER_TLS_KEY}
-#           master-cert-name: ${MASTER_CERT_NAME}
-#       - run-e2e-tests:
-#           mark: <<parameters.mark>>
-#           master-host: ${MASTER_HOST}
-#           master-scheme: ${MASTER_SCHEME:-http}
-#           master-port: ${MASTER_PORT:-8080}
-#           master-cert: ${MASTER_TLS_CERT}
-#           master-cert-name: ${MASTER_CERT_NAME}
-#           wait-for-master: false
-#       - locate-cloudwatch-logs:
-#           cluster-id: ${CLUSTER_ID}
-#       - terminate-aws-cluster:
-#           cluster-id: ${CLUSTER_ID}
-#       - store_test_results:
-#           path: /tmp/test-results/
-#       - slack/status:
-#           fail_only: True
-#           only_for_branches: main
-#           failure_message: ':thisisfine: A \`<<parameters.mark>>\` E2E GPU job on branch \`${CIRCLE_BRANCH}\` has failed! Author Email: \`${AUTHOR_EMAIL}\`'
-#           mentions: <<parameters.slack-mentions>>
-#           channel: <<parameters.slack-channel>>
+  test-e2e-aws:
+    parameters:
+      cluster-id-prefix:
+        type: string
+      mark:
+        type: string
+      compute-agent-instance-type:
+        type: string
+        default: g4dn.xlarge
+      aux-agent-instance-type:
+        type: string
+        default: m5.large
+      max-dynamic-agents:
+        type: integer
+        default: 1
+      parallelism:
+        type: integer
+        default: 1
+      enable-tls:
+        type: boolean
+        default: false
+      slack-mentions:
+        type: string
+        default: ""
+      slack-channel:
+        type: string
+        default: ""
+      environment-gpu-enabled:
+        type: string
+        default: "1"
+    environment:
+      DET_TEST_GPU_ENABLED: <<parameters.environment-gpu-enabled>>
+    docker:
+      - image: <<pipeline.parameters.docker-image>>
+    parallelism: <<parameters.parallelism>>
+    steps:
+      - checkout
+      - skip-if-docs-only
+      - skip-if-github-only
+      - skip-if-webui-only
+      - set-slack-user-id
+      - setup-python-venv:
+          install-python: false
+          determined: true
+          extra-requirements-file: "e2e_tests/tests/requirements.txt"
+          executor: <<pipeline.parameters.docker-image>>
+      - when:
+          condition: <<parameters.enable-tls>>
+          steps:
+            - generate-tls-cert
+      - setup-aws-cluster:
+          cluster-id: <<parameters.cluster-id-prefix>>-$(git rev-parse --short HEAD)-${CIRCLE_BUILD_NUM}-${CIRCLE_NODE_INDEX}
+          extra-tags: test-mark=<<parameters.mark>>
+          det-version: ${CIRCLE_SHA1}
+          aux-agent-instance-type: <<parameters.aux-agent-instance-type>>
+          compute-agent-instance-type: <<parameters.compute-agent-instance-type>>
+          max-dynamic-agents: <<parameters.max-dynamic-agents>>
+          master-tls-cert: ${MASTER_TLS_CERT}
+          master-tls-key: ${MASTER_TLS_KEY}
+          master-cert-name: ${MASTER_CERT_NAME}
+      - run-e2e-tests:
+          mark: <<parameters.mark>>
+          master-host: ${MASTER_HOST}
+          master-scheme: ${MASTER_SCHEME:-http}
+          master-port: ${MASTER_PORT:-8080}
+          master-cert: ${MASTER_TLS_CERT}
+          master-cert-name: ${MASTER_CERT_NAME}
+          wait-for-master: false
+      - locate-cloudwatch-logs:
+          cluster-id: ${CLUSTER_ID}
+      - terminate-aws-cluster:
+          cluster-id: ${CLUSTER_ID}
+      - store_test_results:
+          path: /tmp/test-results/
+      - slack/status:
+          fail_only: True
+          only_for_branches: main
+          failure_message: ':thisisfine: A \`<<parameters.mark>>\` E2E GPU job on branch \`${CIRCLE_BRANCH}\` has failed! Author Email: \`${AUTHOR_EMAIL}\`'
+          mentions: <<parameters.slack-mentions>>
+          channel: <<parameters.slack-channel>>
 
-#   test-e2e-gke:
-#     parameters:
-#       cluster-id-prefix:
-#         type: string
-#       mark:
-#         type: string
-#       parallelism:
-#         type: integer
-#         default: 1
-#       gke-version:
-#         type: string
-#         default: <<pipeline.parameters.gke-version>>
-#       machine-type:
-#         type: string
-#         default: "n1-standard-8"
-#       num-machines:
-#         type: integer
-#         default: 1
-#       gpu-type:
-#         type: string
-#         default: "nvidia-tesla-t4"
-#       gpus-per-machine:
-#         type: integer
-#         default: 1
-#       slot-type:
-#         type: string
-#         default: gpu
-#       slot-resource-requests-cpu:
-#         type: integer
-#         default: 0
-#       region:
-#         type: string
-#         default: "us-west1"
-#       node-locations:
-#         type: string
-#         default: "us-west1-b"
-#       slack-mentions:
-#         type: string
-#         default: ""
-#       slack-channel:
-#         type: string
-#         default: ""
-#       environment-gpu-enabled:
-#         type: string
-#         default: "1"
-#       environment-image:
-#         default: determinedai/environments:cuda-11.3-pytorch-1.12-tf-2.11-gpu-0.26.4
-#         type: string
-#       accel-node-taints:
-#         type: string
-#         default: ""
-#     environment:
-#       DET_TEST_GPU_ENABLED: <<parameters.environment-gpu-enabled>>
-#     docker:
-#       - image: <<pipeline.parameters.docker-image>>
-#     parallelism: <<parameters.parallelism>>
-#     steps:
-#       - checkout
-#       - skip-if-docs-only
-#       - skip-if-github-only
-#       - skip-if-webui-only
-#       - set-slack-user-id
-#       - setup-python-venv:
-#           install-python: false
-#           determined: true
-#           extra-requirements-file: "e2e_tests/tests/requirements.txt"
-#           executor: <<pipeline.parameters.docker-image>>
-#       - queue/until_front_of_line:
-#           only-on-branch: main
-#           # Basically wait forever -- we would prefer not to fail tests, and
-#           # we'll likely never be this backed up.
-#           time: "10000"
-#       - setup-gke-cluster:
-#           cluster-id: <<parameters.cluster-id-prefix>>-$(git rev-parse --short HEAD)-${CIRCLE_BUILD_NUM}-${CIRCLE_NODE_INDEX}
-#           labels: test-mark=<<parameters.mark>>
-#           det-version: ${CIRCLE_SHA1}
-#           gke-version: <<parameters.gke-version>>
-#           machine-type: <<parameters.machine-type>>
-#           num-machines: <<parameters.num-machines>>
-#           gpu-type: <<parameters.gpu-type>>
-#           gpus-per-machine: <<parameters.gpus-per-machine>>
-#           slot-type: <<parameters.slot-type>>
-#           slot-resource-requests-cpu: <<parameters.slot-resource-requests-cpu>>
-#           region: <<parameters.region>>
-#           node-locations: <<parameters.node-locations>>
-#           environment-image: <<parameters.environment-image>>
-#           accel-node-taints: <<parameters.accel-node-taints>>
-#       - set-google-application-credentials
-#       - when:
-#           condition: <<parameters.environment-image>>
-#           steps:
-#             - run:
-#                 command: |
-#                   echo 'export TF2_GPU_IMAGE="<<parameters.environment-image>>"' >> "$BASH_ENV"
-#                 name: override test env images.
-#       - run-e2e-tests:
-#           mark: <<parameters.mark>>
-#           master-host: ${MASTER_HOST}
-#       - store_test_results:
-#           path: /tmp/test-results/
-#       - terminate-gke-cluster:
-#           cluster-id: ${CLUSTER_ID}
-#           region: <<parameters.region>>
-#       - slack/status:
-#           fail_only: True
-#           only_for_branches: main
-#           failure_message: ':thisisfine: A \`<<parameters.mark>>\` E2E GKE GPU job on branch \`${CIRCLE_BRANCH}\` has failed! Author Email: \`${AUTHOR_EMAIL}\`'
-#           mentions: <<parameters.slack-mentions>>
-#           channel: <<parameters.slack-channel>>
+  test-e2e-gke:
+    parameters:
+      cluster-id-prefix:
+        type: string
+      mark:
+        type: string
+      parallelism:
+        type: integer
+        default: 1
+      gke-version:
+        type: string
+        default: <<pipeline.parameters.gke-version>>
+      machine-type:
+        type: string
+        default: "n1-standard-8"
+      num-machines:
+        type: integer
+        default: 1
+      gpu-type:
+        type: string
+        default: "nvidia-tesla-t4"
+      gpus-per-machine:
+        type: integer
+        default: 1
+      slot-type:
+        type: string
+        default: gpu
+      slot-resource-requests-cpu:
+        type: integer
+        default: 0
+      region:
+        type: string
+        default: "us-west1"
+      node-locations:
+        type: string
+        default: "us-west1-b"
+      slack-mentions:
+        type: string
+        default: ""
+      slack-channel:
+        type: string
+        default: ""
+      environment-gpu-enabled:
+        type: string
+        default: "1"
+      environment-image:
+        default: determinedai/environments:cuda-11.3-pytorch-1.12-tf-2.11-gpu-0.26.4
+        type: string
+      accel-node-taints:
+        type: string
+        default: ""
+    environment:
+      DET_TEST_GPU_ENABLED: <<parameters.environment-gpu-enabled>>
+    docker:
+      - image: <<pipeline.parameters.docker-image>>
+    parallelism: <<parameters.parallelism>>
+    steps:
+      - checkout
+      - skip-if-docs-only
+      - skip-if-github-only
+      - skip-if-webui-only
+      - set-slack-user-id
+      - setup-python-venv:
+          install-python: false
+          determined: true
+          extra-requirements-file: "e2e_tests/tests/requirements.txt"
+          executor: <<pipeline.parameters.docker-image>>
+      - queue/until_front_of_line:
+          only-on-branch: main
+          # Basically wait forever -- we would prefer not to fail tests, and
+          # we'll likely never be this backed up.
+          time: "10000"
+      - setup-gke-cluster:
+          cluster-id: <<parameters.cluster-id-prefix>>-$(git rev-parse --short HEAD)-${CIRCLE_BUILD_NUM}-${CIRCLE_NODE_INDEX}
+          labels: test-mark=<<parameters.mark>>
+          det-version: ${CIRCLE_SHA1}
+          gke-version: <<parameters.gke-version>>
+          machine-type: <<parameters.machine-type>>
+          num-machines: <<parameters.num-machines>>
+          gpu-type: <<parameters.gpu-type>>
+          gpus-per-machine: <<parameters.gpus-per-machine>>
+          slot-type: <<parameters.slot-type>>
+          slot-resource-requests-cpu: <<parameters.slot-resource-requests-cpu>>
+          region: <<parameters.region>>
+          node-locations: <<parameters.node-locations>>
+          environment-image: <<parameters.environment-image>>
+          accel-node-taints: <<parameters.accel-node-taints>>
+      - set-google-application-credentials
+      - when:
+          condition: <<parameters.environment-image>>
+          steps:
+            - run:
+                command: |
+                  echo 'export TF2_GPU_IMAGE="<<parameters.environment-image>>"' >> "$BASH_ENV"
+                name: override test env images.
+      - run-e2e-tests:
+          mark: <<parameters.mark>>
+          master-host: ${MASTER_HOST}
+      - store_test_results:
+          path: /tmp/test-results/
+      - terminate-gke-cluster:
+          cluster-id: ${CLUSTER_ID}
+          region: <<parameters.region>>
+      - slack/status:
+          fail_only: True
+          only_for_branches: main
+          failure_message: ':thisisfine: A \`<<parameters.mark>>\` E2E GKE GPU job on branch \`${CIRCLE_BRANCH}\` has failed! Author Email: \`${AUTHOR_EMAIL}\`'
+          mentions: <<parameters.slack-mentions>>
+          channel: <<parameters.slack-channel>>
 
-#   test-det-deploy:
-#     parameters:
-#       mark:
-#         type: string
-#       parallelism:
-#         type: integer
-#         default: 1
-#       det-version:
-#         type: string
-#     machine:
-#       image: <<pipeline.parameters.machine-image>>
-#     resource_class: large
-#     parallelism: <<parameters.parallelism>>
-#     steps:
-#       - checkout
-#       - skip-if-docs-only
-#       - skip-if-github-only
-#       - skip-if-webui-only
-#       - attach_workspace:
-#           at: .
-#       - run: docker load --input build/master.image
-#       - run: docker load --input build/agent.image
+  test-det-deploy:
+    parameters:
+      mark:
+        type: string
+      parallelism:
+        type: integer
+        default: 1
+      det-version:
+        type: string
+    machine:
+      image: <<pipeline.parameters.machine-image>>
+    resource_class: large
+    parallelism: <<parameters.parallelism>>
+    steps:
+      - checkout
+      - skip-if-docs-only
+      - skip-if-github-only
+      - skip-if-webui-only
+      - attach_workspace:
+          at: .
+      - run: docker load --input build/master.image
+      - run: docker load --input build/agent.image
 
-#       - setup-python-venv:
-#           determined: true
-#           extra-requirements-file: "e2e_tests/tests/requirements.txt"
-#           executor: <<pipeline.parameters.machine-image>>
+      - setup-python-venv:
+          determined: true
+          extra-requirements-file: "e2e_tests/tests/requirements.txt"
+          executor: <<pipeline.parameters.machine-image>>
 
-#       - run-det-deploy-tests:
-#           mark: <<parameters.mark>>
-#           det-version: <<parameters.det-version>>
+      - run-det-deploy-tests:
+          mark: <<parameters.mark>>
+          det-version: <<parameters.det-version>>
 
-#   test-stress:
-#     parameters:
-#       mark:
-#         type: string
-#       parallelism:
-#         type: integer
-#         default: 1
-#       det-version:
-#         type: string
-#     machine:
-#       image: <<pipeline.parameters.machine-image>>
-#     resource_class: large
-#     parallelism: <<parameters.parallelism>>
-#     steps:
-#       - checkout
-#       - skip-if-docs-only
-#       - skip-if-github-only
-#       - skip-if-webui-only
-#       - attach_workspace:
-#           at: .
-#       - run: docker load --input build/master.image
-#       - run: docker load --input build/agent.image
+  test-stress:
+    parameters:
+      mark:
+        type: string
+      parallelism:
+        type: integer
+        default: 1
+      det-version:
+        type: string
+    machine:
+      image: <<pipeline.parameters.machine-image>>
+    resource_class: large
+    parallelism: <<parameters.parallelism>>
+    steps:
+      - checkout
+      - skip-if-docs-only
+      - skip-if-github-only
+      - skip-if-webui-only
+      - attach_workspace:
+          at: .
+      - run: docker load --input build/master.image
+      - run: docker load --input build/agent.image
 
-#       - setup-python-venv:
-#           determined: true
-#           extra-requirements-file: "e2e_tests/tests/requirements.txt"
-#           executor: <<pipeline.parameters.machine-image>>
+      - setup-python-venv:
+          determined: true
+          extra-requirements-file: "e2e_tests/tests/requirements.txt"
+          executor: <<pipeline.parameters.machine-image>>
 
 
-#       - run-det-deploy-tests:
-#           mark: <<parameters.mark>>
-#           det-version: <<parameters.det-version>>
+      - run-det-deploy-tests:
+          mark: <<parameters.mark>>
+          det-version: <<parameters.det-version>>
 
-#   test-aws-fs:
-#     parameters:
-#       cluster-id-prefix:
-#         type: string
-#       deployment-type:
-#         type: string
-#       compute-agent-instance-type:
-#         type: string
-#         default: g4dn.xlarge
-#       aux-agent-instance-type:
-#         type: string
-#         default: m5.large
-#       max-dynamic-agents:
-#         type: integer
-#         default: 1
-#       slack-mentions:
-#         type: string
-#         default: ""
-#       slack-channel:
-#         type: string
-#         default: ""
-#     docker:
-#       - image: <<pipeline.parameters.docker-image>>
-#     steps:
-#       - checkout
-#       - skip-if-docs-only
-#       - skip-if-github-only
-#       - skip-if-webui-only
-#       - set-slack-user-id
-#       - setup-python-venv:
-#           install-python: false
-#           determined: true
-#           extra-requirements-file: "e2e_tests/tests/requirements.txt"
-#           executor: <<pipeline.parameters.docker-image>>
-#       - setup-aws-cluster:
-#           cluster-id: <<parameters.cluster-id-prefix>>-$(git rev-parse --short HEAD)-${CIRCLE_BUILD_NUM}-${CIRCLE_NODE_INDEX}
-#           extra-tags: test-mark=fs
-#           det-version: ${CIRCLE_SHA1}
-#           aux-agent-instance-type: <<parameters.aux-agent-instance-type>>
-#           compute-agent-instance-type: <<parameters.compute-agent-instance-type>>
-#           max-dynamic-agents: <<parameters.max-dynamic-agents>>
-#           master-tls-cert: ${MASTER_TLS_CERT}
-#           master-tls-key: ${MASTER_TLS_KEY}
-#           master-cert-name: ${MASTER_CERT_NAME}
-#           deployment-type: <<parameters.deployment-type>>
-#       - run:
-#           name: Set DET_MASTER for further action.
-#           command: |
-#             echo "export DET_MASTER=${MASTER_SCHEME:-http}://${MASTER_HOST}:${MASTER_PORT:-8080}" >> "$BASH_ENV"
-#       - when:
-#           condition:
-#             equal: [<<parameters.deployment-type>>, "fsx"]
-#           steps:
-#             - run:
-#                 name: Test FSx/Lustre
-#                 command: |
-#                   det cmd run --config resources.slots=1 'mount | grep lustre && echo MARKER' | grep MARKER
-#       - when:
-#           condition:
-#             equal: [<<parameters.deployment-type>>, "efs"]
-#           steps:
-#             - run:
-#                 name: Test EFS
-#                 command: |
-#                   det cmd run --config resources.slots=1 'mount | grep efs && echo MARKER' | grep MARKER
-#       - locate-cloudwatch-logs:
-#           cluster-id: ${CLUSTER_ID}
-#       - terminate-aws-cluster:
-#           cluster-id: ${CLUSTER_ID}
-#       - slack/status:
-#           fail_only: True
-#           only_for_branches: main
-#           failure_message: ':thisisfine: AWS FS \`<<parameters.deployment-type>>\` job on branch \`${CIRCLE_BRANCH}\` has failed! Author Email: \`${AUTHOR_EMAIL}\`'
-#           mentions: <<parameters.slack-mentions>>
-#           channel: <<parameters.slack-channel>>
+  test-aws-fs:
+    parameters:
+      cluster-id-prefix:
+        type: string
+      deployment-type:
+        type: string
+      compute-agent-instance-type:
+        type: string
+        default: g4dn.xlarge
+      aux-agent-instance-type:
+        type: string
+        default: m5.large
+      max-dynamic-agents:
+        type: integer
+        default: 1
+      slack-mentions:
+        type: string
+        default: ""
+      slack-channel:
+        type: string
+        default: ""
+    docker:
+      - image: <<pipeline.parameters.docker-image>>
+    steps:
+      - checkout
+      - skip-if-docs-only
+      - skip-if-github-only
+      - skip-if-webui-only
+      - set-slack-user-id
+      - setup-python-venv:
+          install-python: false
+          determined: true
+          extra-requirements-file: "e2e_tests/tests/requirements.txt"
+          executor: <<pipeline.parameters.docker-image>>
+      - setup-aws-cluster:
+          cluster-id: <<parameters.cluster-id-prefix>>-$(git rev-parse --short HEAD)-${CIRCLE_BUILD_NUM}-${CIRCLE_NODE_INDEX}
+          extra-tags: test-mark=fs
+          det-version: ${CIRCLE_SHA1}
+          aux-agent-instance-type: <<parameters.aux-agent-instance-type>>
+          compute-agent-instance-type: <<parameters.compute-agent-instance-type>>
+          max-dynamic-agents: <<parameters.max-dynamic-agents>>
+          master-tls-cert: ${MASTER_TLS_CERT}
+          master-tls-key: ${MASTER_TLS_KEY}
+          master-cert-name: ${MASTER_CERT_NAME}
+          deployment-type: <<parameters.deployment-type>>
+      - run:
+          name: Set DET_MASTER for further action.
+          command: |
+            echo "export DET_MASTER=${MASTER_SCHEME:-http}://${MASTER_HOST}:${MASTER_PORT:-8080}" >> "$BASH_ENV"
+      - when:
+          condition:
+            equal: [<<parameters.deployment-type>>, "fsx"]
+          steps:
+            - run:
+                name: Test FSx/Lustre
+                command: |
+                  det cmd run --config resources.slots=1 'mount | grep lustre && echo MARKER' | grep MARKER
+      - when:
+          condition:
+            equal: [<<parameters.deployment-type>>, "efs"]
+          steps:
+            - run:
+                name: Test EFS
+                command: |
+                  det cmd run --config resources.slots=1 'mount | grep efs && echo MARKER' | grep MARKER
+      - locate-cloudwatch-logs:
+          cluster-id: ${CLUSTER_ID}
+      - terminate-aws-cluster:
+          cluster-id: ${CLUSTER_ID}
+      - slack/status:
+          fail_only: True
+          only_for_branches: main
+          failure_message: ':thisisfine: AWS FS \`<<parameters.deployment-type>>\` job on branch \`${CIRCLE_BRANCH}\` has failed! Author Email: \`${AUTHOR_EMAIL}\`'
+          mentions: <<parameters.slack-mentions>>
+          channel: <<parameters.slack-channel>>
 
 workflows:
-  # lint:
-  #   jobs:
-  #     - build-proto
-  #     - check-py-bindings:
-  #         requires:
-  #           - build-proto
-  #     - check-ts-bindings:
-  #         requires:
-  #           - build-proto
-  #     - lint-docs
-  #     - lint-python
-  #     - lint-go
-  #     - lint-sql
-  #     - lint-react
-  #     - lint-secrets
+  lint:
+    jobs:
+      - build-proto
+      - check-py-bindings:
+          requires:
+            - build-proto
+      - check-ts-bindings:
+          requires:
+            - build-proto
+      - lint-docs
+      - lint-python
+      - lint-go
+      - lint-sql
+      - lint-react
+      - lint-secrets
 
-  # previews:
-  #   jobs:
-  #     - build-proto
-  #     - build-helm
-  #     - build-docs:
-  #         requires:
-  #           - build-helm
-  #           - build-proto
-  #     - publish-docs-new:
-  #         requires:
-  #           - build-docs
-  #         context: aws
-  #         filters: *any-upstream
+  previews:
+    jobs:
+      - build-proto
+      - build-helm
+      - build-docs:
+          requires:
+            - build-helm
+            - build-proto
+      - publish-docs-new:
+          requires:
+            - build-docs
+          context: aws
+          filters: *any-upstream
 
-  # test-cli:
-  #   jobs:
-  #     - test-cli:
-  #         matrix:
-  #           parameters:
-  #             executor-name:
-  #               ["python-37", "python-38", "python-39", "win/default"]
+  test-cli:
+    jobs:
+      - test-cli:
+          matrix:
+            parameters:
+              executor-name:
+                ["python-37", "python-38", "python-39", "win/default"]
 
-  # test-unit:
-  #   jobs:
-  #     - test-unit-react
-  #     - test-unit-harness-cpu
-  #     - test-unit-harness-tf2
-  #     - test-unit-harness-pytorch2-cpu
-  #     - test-unit-harness-pytorch2-gpu
+  test-unit:
+    jobs:
+      - test-unit-react
+      - test-unit-harness-cpu
+      - test-unit-harness-tf2
+      - test-unit-harness-pytorch2-cpu
+      - test-unit-harness-pytorch2-gpu
 
-  #     - test-unit-harness-gpu:
-  #         filters: *any-upstream
-  #     - test-unit-harness-gpu-deepspeed:
-  #         filters: *any-upstream
-  #     - test-unit-harness-gpu-parallel:
-  #         filters: *any-upstream
+      - test-unit-harness-gpu:
+          filters: *any-upstream
+      - test-unit-harness-gpu-deepspeed:
+          filters: *any-upstream
+      - test-unit-harness-gpu-parallel:
+          filters: *any-upstream
 
-  #     # allows forks to request run approval instead of failing
-  #     - request-gpu-unit-tests:
-  #         type: approval
-  #         filters: *any-fork
-  #     - test-unit-harness-gpu:
-  #         name: f-test-unit-harness-gpu
-  #         filters: *any-fork
-  #     - test-unit-harness-gpu-deepspeed:
-  #         name: f-test-unit-harness-gpu-deepspeed
-  #         filters: *any-fork
-  #     - test-unit-harness-gpu-parallel:
-  #         name: f-test-unit-harness-gpu-parallel
-  #         filters: *any-fork
+      # allows forks to request run approval instead of failing
+      - request-gpu-unit-tests:
+          type: approval
+          filters: *any-fork
+      - test-unit-harness-gpu:
+          name: f-test-unit-harness-gpu
+          filters: *any-fork
+      - test-unit-harness-gpu-deepspeed:
+          name: f-test-unit-harness-gpu-deepspeed
+          filters: *any-fork
+      - test-unit-harness-gpu-parallel:
+          name: f-test-unit-harness-gpu-parallel
+          filters: *any-fork
 
-  #     - test-unit-model-hub
-  #     - test-unit-storage:
-  #         context: storage-unit-tests
-  #         filters: *any-upstream
-  #     - python-coverage:
-  #         requires:
-  #           - test-unit-harness-cpu
-  #           - test-unit-harness-gpu
-  #           - test-unit-harness-gpu-parallel
-  #           - test-unit-harness-tf2
-  #           - test-unit-harness-pytorch2-cpu
-  #           - test-unit-harness-pytorch2-gpu
-  #           - test-unit-model-hub
-  #           - test-unit-storage
+      - test-unit-model-hub
+      - test-unit-storage:
+          context: storage-unit-tests
+          filters: *any-upstream
+      - python-coverage:
+          requires:
+            - test-unit-harness-cpu
+            - test-unit-harness-gpu
+            - test-unit-harness-gpu-parallel
+            - test-unit-harness-tf2
+            - test-unit-harness-pytorch2-cpu
+            - test-unit-harness-pytorch2-gpu
+            - test-unit-model-hub
+            - test-unit-storage
 
   test-go:
     jobs:
@@ -2598,716 +2592,716 @@ workflows:
       - test-intg-master:
           context: storage-unit-tests
       - test-intg-agent
-      # - go-coverage:
-      #     requires:
-      #       - test-intg-master
-      #       - test-intg-agent
-      # - check-go-coverage-master:
-      #     requires:
-      #       - go-coverage
-      # - check-go-coverage-agent:
-      #     requires:
-      #       - go-coverage
+      - go-coverage:
+          requires:
+            - test-intg-master
+            - test-intg-agent
+      - check-go-coverage-master:
+          requires:
+            - go-coverage
+      - check-go-coverage-agent:
+          requires:
+            - go-coverage
 
-  # test-e2e:
-  #   jobs:
-  #     - build-proto
-  #     - build-helm
-  #     - build-react:
-  #         dev-mode: true
-  #     - test-e2e-react:
-  #         context: playwright
-  #         filters: *any-upstream
-  #     - build-docs:
-  #         requires:
-  #           - build-helm
-  #           - build-proto
-  #     - build-go
-  #     - package-and-push-system-local:
-  #         requires:
-  #           - build-react
-  #           - build-docs
-  #         filters:
-  #           branches:
-  #             only:
-  #               - main
+  test-e2e:
+    jobs:
+      - build-proto
+      - build-helm
+      - build-react:
+          dev-mode: true
+      - test-e2e-react:
+          context: playwright
+          filters: *any-upstream
+      - build-docs:
+          requires:
+            - build-helm
+            - build-proto
+      - build-go
+      - package-and-push-system-local:
+          requires:
+            - build-react
+            - build-docs
+          filters:
+            branches:
+              only:
+                - main
 
-  #     - package-and-push-system-dev:
-  #         requires:
-  #           - build-react
-  #           - build-docs
-  #         filters:
-  #           branches:
-  #             only:
-  #               - main
+      - package-and-push-system-dev:
+          requires:
+            - build-react
+            - build-docs
+          filters:
+            branches:
+              only:
+                - main
 
-  #     - upload-docs-search-index:
-  #         requires:
-  #           - build-docs
-  #         context: determined-production
-  #         filters:
-  #           branches:
-  #             only:
-  #               - main
+      - upload-docs-search-index:
+          requires:
+            - build-docs
+          context: determined-production
+          filters:
+            branches:
+              only:
+                - main
 
-  #     - test-debian-packaging:
-  #         requires:
-  #           - package-and-push-system-local
-  #         filters:
-  #           branches:
-  #             only:
-  #               - main
+      - test-debian-packaging:
+          requires:
+            - package-and-push-system-local
+          filters:
+            branches:
+              only:
+                - main
 
-  #     - test-e2e:
-  #         name: test-e2e-cpu
-  #         requires:
-  #           - build-go
-  #         parallelism: 6
-  #         tf2: true
-  #         mark: e2e_cpu
+      - test-e2e:
+          name: test-e2e-cpu
+          requires:
+            - build-go
+          parallelism: 6
+          tf2: true
+          mark: e2e_cpu
 
-  #     - test-e2e:
-  #         name: test-e2e-cpu-double
-  #         requires:
-  #           - build-go
-  #         parallelism: 3
-  #         tf2: true
-  #         mark: e2e_cpu_2a
-  #         target-stage: agent2
-  #         devcluster-config: double-priority.devcluster.yaml
+      - test-e2e:
+          name: test-e2e-cpu-double
+          requires:
+            - build-go
+          parallelism: 3
+          tf2: true
+          mark: e2e_cpu_2a
+          target-stage: agent2
+          devcluster-config: double-priority.devcluster.yaml
 
-  #     - test-e2e:
-  #         name: test-e2e-managed-devcluster
-  #         requires:
-  #           - build-go
-  #         parallelism: 4
-  #         tf2: true
-  #         mark: managed_devcluster
-  #         managed-devcluster: true
-  #         # Managed devcluster restarts the master over the course of the tests,
-  #         # so `compare_stats` cannot get the full logs from `det master logs`.
-  #         extra-pytest-flags: "--no-compare-stats"
+      - test-e2e:
+          name: test-e2e-managed-devcluster
+          requires:
+            - build-go
+          parallelism: 4
+          tf2: true
+          mark: managed_devcluster
+          managed-devcluster: true
+          # Managed devcluster restarts the master over the course of the tests,
+          # so `compare_stats` cannot get the full logs from `det master logs`.
+          extra-pytest-flags: "--no-compare-stats"
 
-  #     - test-e2e:
-  #         name: test-e2e-port-registry
-  #         requires:
-  #           - build-go
-  #         parallelism: 1
-  #         devcluster-config: port-registry.devcluster.yaml
-  #         mark: port_registry
-  #         target-stage: agent
+      - test-e2e:
+          name: test-e2e-port-registry
+          requires:
+            - build-go
+          parallelism: 1
+          devcluster-config: port-registry.devcluster.yaml
+          mark: port_registry
+          target-stage: agent
 
-  #     - test-e2e:
-  #         name: test-e2e-cpu-elastic
-  #         requires:
-  #           - build-go
-  #         parallelism: 1
-  #         mark: e2e_cpu_elastic
-  #         devcluster-config: elastic.devcluster.yaml
-  #         target-stage: agent
+      - test-e2e:
+          name: test-e2e-cpu-elastic
+          requires:
+            - build-go
+          parallelism: 1
+          mark: e2e_cpu_elastic
+          devcluster-config: elastic.devcluster.yaml
+          target-stage: agent
 
-  #     - test-e2e:
-  #         name: test-e2e-postgres10-with-ssl
-  #         requires:
-  #           - build-go
-  #         parallelism: 1
-  #         mark: e2e_cpu_postgres
-  #         devcluster-config: postgres-with-ssl.devcluster.yaml
-  #         target-stage: agent
-  #         postgres-version: "10"
+      - test-e2e:
+          name: test-e2e-postgres10-with-ssl
+          requires:
+            - build-go
+          parallelism: 1
+          mark: e2e_cpu_postgres
+          devcluster-config: postgres-with-ssl.devcluster.yaml
+          target-stage: agent
+          postgres-version: "10"
 
-  #     - test-e2e:
-  #         name: test-e2e-postgres14-with-ssl
-  #         requires:
-  #           - build-go
-  #         parallelism: 1
-  #         mark: e2e_cpu_postgres
-  #         devcluster-config: postgres-with-ssl.devcluster.yaml
-  #         target-stage: agent
-  #         postgres-version: "14"
+      - test-e2e:
+          name: test-e2e-postgres14-with-ssl
+          requires:
+            - build-go
+          parallelism: 1
+          mark: e2e_cpu_postgres
+          devcluster-config: postgres-with-ssl.devcluster.yaml
+          target-stage: agent
+          postgres-version: "14"
 
-  #     - test-e2e:
-  #         name: test-e2e-old-agent-versions
-  #         requires:
-  #           - build-go
-  #         parallelism: 1
-  #         mark: e2e_cpu_postgres
-  #         devcluster-config: custom-agent-version.devcluster.yaml
-  #         target-stage: agent
-  #         matrix:
-  #           parameters:
-  #             agent-version: ["0.17.10"]
+      - test-e2e:
+          name: test-e2e-old-agent-versions
+          requires:
+            - build-go
+          parallelism: 1
+          mark: e2e_cpu_postgres
+          devcluster-config: custom-agent-version.devcluster.yaml
+          target-stage: agent
+          matrix:
+            parameters:
+              agent-version: ["0.17.10"]
 
-  #     - test-e2e:
-  #         name: test-e2e-agent-connection-loss
-  #         requires:
-  #           - build-go
-  #         parallelism: 1
-  #         mark: e2e_cpu_agent_connection_loss
-  #         devcluster-config: agent-no-connection.devcluster.yaml
-  #         target-stage: agent
-  #         wait-for-master: false
+      - test-e2e:
+          name: test-e2e-agent-connection-loss
+          requires:
+            - build-go
+          parallelism: 1
+          mark: e2e_cpu_agent_connection_loss
+          devcluster-config: agent-no-connection.devcluster.yaml
+          target-stage: agent
+          wait-for-master: false
 
-  #     - deploy:
-  #         name: deploy-latest-master-cluster
-  #         enable-cors: true
-  #         reattach-enabled: true
-  #         context: aws
-  #         filters:
-  #           branches:
-  #             only:
-  #               - main
-  #         requires:
-  #           - package-and-push-system-dev
-  #         max-dynamic-agents: 2
+      - deploy:
+          name: deploy-latest-master-cluster
+          enable-cors: true
+          reattach-enabled: true
+          context: aws
+          filters:
+            branches:
+              only:
+                - main
+          requires:
+            - package-and-push-system-dev
+          max-dynamic-agents: 2
 
-  #     - deploy:
-  #         name: deploy-preview-cluster
-  #         enable-cors: true
-  #         context: aws
-  #         filters:
-  #           branches:
-  #             only:
-  #               - main
-  #         requires:
-  #           - package-and-push-system-dev
-  #         max-dynamic-agents: 1
-  #         cluster-id: determined-preview
-  #         compute-agent-instance-type: t2.medium
+      - deploy:
+          name: deploy-preview-cluster
+          enable-cors: true
+          context: aws
+          filters:
+            branches:
+              only:
+                - main
+          requires:
+            - package-and-push-system-dev
+          max-dynamic-agents: 1
+          cluster-id: determined-preview
+          compute-agent-instance-type: t2.medium
 
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-parallel
-  #         context: aws
-  #         filters:
-  #           branches:
-  #             only: main
-  #         requires:
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             parallelism: [2]
-  #             compute-agent-instance-type: ["g4dn.metal"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             cluster-id-prefix: ["parallel"]
-  #             mark: ["parallel"]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
+      - test-e2e-aws:
+          name: test-e2e-gpu-parallel
+          context: aws
+          filters:
+            branches:
+              only: main
+          requires:
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              parallelism: [2]
+              compute-agent-instance-type: ["g4dn.metal"]
+              aux-agent-instance-type: ["m5.large"]
+              cluster-id-prefix: ["parallel"]
+              mark: ["parallel"]
+              slack-mentions: ["${SLACK_USER_ID}"]
 
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-single
-  #         context: aws
-  #         filters:
-  #           branches:
-  #             only: main
-  #         requires:
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             parallelism: [2]
-  #             cluster-id-prefix: ["e2e-gpu"]
-  #             enable-tls: [true]
-  #             mark: ["e2e_gpu"]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
+      - test-e2e-aws:
+          name: test-e2e-gpu-single
+          context: aws
+          filters:
+            branches:
+              only: main
+          requires:
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              parallelism: [2]
+              cluster-id-prefix: ["e2e-gpu"]
+              enable-tls: [true]
+              mark: ["e2e_gpu"]
+              slack-mentions: ["${SLACK_USER_ID}"]
 
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-single-gpu
-  #         context: gcp-ci
-  #         filters:
-  #           branches:
-  #             only: main
-  #         requires:
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["e2e-gpu"]
-  #             mark: ["e2e_gpu"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
+      - test-e2e-gke:
+          name: test-e2e-gke-single-gpu
+          context: gcp-ci
+          filters:
+            branches:
+              only: main
+          requires:
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["e2e-gpu"]
+              mark: ["e2e_gpu"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
 
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-parallel
-  #         context: gcp-ci
-  #         filters:
-  #           branches:
-  #             only: main
-  #         requires:
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["parallel"]
-  #             mark: ["parallel"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             machine-type: ["n1-standard-32"]
-  #             gpus-per-machine: [4]
-  #             num-machines: [2]
+      - test-e2e-gke:
+          name: test-e2e-gke-parallel
+          context: gcp-ci
+          filters:
+            branches:
+              only: main
+          requires:
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["parallel"]
+              mark: ["parallel"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              machine-type: ["n1-standard-32"]
+              gpus-per-machine: [4]
+              num-machines: [2]
 
-  #     # Legacy tf 2.4 tests.
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-single-gpu-tfonly
-  #         context: gcp-ci
-  #         filters:
-  #           branches:
-  #             only: main
-  #         requires:
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["e2e-gpu-tfonly"]
-  #             mark: ["e2e_gpu and tensorflow2"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             environment-image:
-  #               - determinedai/environments:cuda-11.1-pytorch-1.9-tf-2.4-gpu-0.19.10
+      # Legacy tf 2.4 tests.
+      - test-e2e-gke:
+          name: test-e2e-gke-single-gpu-tfonly
+          context: gcp-ci
+          filters:
+            branches:
+              only: main
+          requires:
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["e2e-gpu-tfonly"]
+              mark: ["e2e_gpu and tensorflow2"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              environment-image:
+                - determinedai/environments:cuda-11.1-pytorch-1.9-tf-2.4-gpu-0.19.10
 
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-single-cpu
-  #         context: gcp-ci
-  #         filters:
-  #           branches:
-  #             only: main
-  #         requires:
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["e2e-cpu"]
-  #             mark: ["e2e_gpu and not gpu_required"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             machine-type: ["n1-standard-8"]
-  #             gpus-per-machine: [0]
-  #             environment-gpu-enabled: ["0"]
-  #             slot-type: ["cpu"]
-  #             slot-resource-requests-cpu: [7]
+      - test-e2e-gke:
+          name: test-e2e-gke-single-cpu
+          context: gcp-ci
+          filters:
+            branches:
+              only: main
+          requires:
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["e2e-cpu"]
+              mark: ["e2e_gpu and not gpu_required"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              machine-type: ["n1-standard-8"]
+              gpus-per-machine: [0]
+              environment-gpu-enabled: ["0"]
+              slot-type: ["cpu"]
+              slot-resource-requests-cpu: [7]
 
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-k8s-reattach
-  #         context: gcp-ci
-  #         filters:
-  #           branches:
-  #             only: main
-  #         requires:
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["e2e-k8s"]
-  #             mark: ["e2e_k8s"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             machine-type: ["n1-standard-8"]
-  #             gpus-per-machine: [0]
-  #             environment-gpu-enabled: ["0"]
-  #             slot-type: ["cpu"]
-  #             slot-resource-requests-cpu: [7]
-  #             accel-node-taints: ["accel=truth:NoSchedule"]
+      - test-e2e-gke:
+          name: test-e2e-gke-k8s-reattach
+          context: gcp-ci
+          filters:
+            branches:
+              only: main
+          requires:
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["e2e-k8s"]
+              mark: ["e2e_k8s"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              machine-type: ["n1-standard-8"]
+              gpus-per-machine: [0]
+              environment-gpu-enabled: ["0"]
+              slot-type: ["cpu"]
+              slot-resource-requests-cpu: [7]
+              accel-node-taints: ["accel=truth:NoSchedule"]
 
-  # test-e2e-quarantined:
-  #   jobs:
-  #     - build-proto
-  #     - build-helm
-  #     - build-react:
-  #         dev-mode: true
-  #     - build-docs:
-  #         requires:
-  #           - build-helm
-  #           - build-proto
-  #     - package-and-push-system-local:
-  #         requires:
-  #           - build-react
-  #           - build-docs
+  test-e2e-quarantined:
+    jobs:
+      - build-proto
+      - build-helm
+      - build-react:
+          dev-mode: true
+      - build-docs:
+          requires:
+            - build-helm
+            - build-proto
+      - package-and-push-system-local:
+          requires:
+            - build-react
+            - build-docs
 
-  #     - test-stress:
-  #         name: test-stress
-  #         filters: *any-upstream
-  #         requires:
-  #           - package-and-push-system-local
-  #         matrix:
-  #           parameters:
-  #             parallelism: [1]
-  #             mark: ["stress_test"]
-  #             det-version: [$CIRCLE_SHA1]
+      - test-stress:
+          name: test-stress
+          filters: *any-upstream
+          requires:
+            - package-and-push-system-local
+          matrix:
+            parameters:
+              parallelism: [1]
+              mark: ["stress_test"]
+              det-version: [$CIRCLE_SHA1]
 
-  #     - test-det-deploy:
-  #         name: test-det-deploy-local
-  #         requires:
-  #           - package-and-push-system-local
-  #         matrix:
-  #           parameters:
-  #             parallelism: [2]
-  #             mark: ["det_deploy_local"]
-  #             det-version: [$CIRCLE_SHA1]
+      - test-det-deploy:
+          name: test-det-deploy-local
+          requires:
+            - package-and-push-system-local
+          matrix:
+            parameters:
+              parallelism: [2]
+              mark: ["det_deploy_local"]
+              det-version: [$CIRCLE_SHA1]
 
-  #     - test-unit-react-quarantined
+      - test-unit-react-quarantined
 
-  # test-e2e-longrunning:
-  #   jobs:
-  #     # Build and publish artifacts used in tests
-  #     - build-helm:
-  #         filters: *any-upstream
-  #     - build-proto:
-  #         filters: *any-upstream
-  #     - build-react:
-  #         dev-mode: true
-  #         filters: *any-upstream
-  #     - build-docs:
-  #         filters: *any-upstream
-  #         requires:
-  #           - build-helm
-  #           - build-proto
-  #     - package-and-push-system-dev:
-  #         requires:
-  #           - build-react
-  #           - build-docs
-  #         filters: *any-upstream
+  test-e2e-longrunning:
+    jobs:
+      # Build and publish artifacts used in tests
+      - build-helm:
+          filters: *any-upstream
+      - build-proto:
+          filters: *any-upstream
+      - build-react:
+          dev-mode: true
+          filters: *any-upstream
+      - build-docs:
+          filters: *any-upstream
+          requires:
+            - build-helm
+            - build-proto
+      - package-and-push-system-dev:
+          requires:
+            - build-react
+            - build-docs
+          filters: *any-upstream
 
-  #     # Distributed tests
-  #     - request-e2e-cpu-distributed:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # Distributed tests
+      - request-e2e-cpu-distributed:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #     - test-e2e-aws:
-  #         name: test-e2e-cpu-distributed
-  #         context: aws
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-e2e-cpu-distributed
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["distributed"]
-  #             mark: ["distributed and not gpu_required"]
-  #             compute-agent-instance-type: ["c5.2xlarge"]
-  #             environment-gpu-enabled: ["0"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             max-dynamic-agents: [16]
+      - test-e2e-aws:
+          name: test-e2e-cpu-distributed
+          context: aws
+          filters: *upstream-feature-branch
+          requires:
+            - request-e2e-cpu-distributed
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["distributed"]
+              mark: ["distributed and not gpu_required"]
+              compute-agent-instance-type: ["c5.2xlarge"]
+              environment-gpu-enabled: ["0"]
+              aux-agent-instance-type: ["m5.large"]
+              max-dynamic-agents: [16]
 
-  #     # DeepSpeed tests
-  #     - request-deepspeed-tests:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # DeepSpeed tests
+      - request-deepspeed-tests:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #       # DeepSpeed tests do not work on K80s, so we need V100 instances.
-  #     - test-e2e-aws:
-  #         name: test-e2e-deepspeed
-  #         context: aws
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-deepspeed-tests
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             compute-agent-instance-type: ["g4dn.12xlarge"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             cluster-id-prefix: ["deepspeed"]
-  #             mark: ["deepspeed"]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             max-dynamic-agents: [2]
+        # DeepSpeed tests do not work on K80s, so we need V100 instances.
+      - test-e2e-aws:
+          name: test-e2e-deepspeed
+          context: aws
+          filters: *upstream-feature-branch
+          requires:
+            - request-deepspeed-tests
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              compute-agent-instance-type: ["g4dn.12xlarge"]
+              aux-agent-instance-type: ["m5.large"]
+              cluster-id-prefix: ["deepspeed"]
+              mark: ["deepspeed"]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              max-dynamic-agents: [2]
 
-  #     # K8s GPU tests
-  #     - request-k8-tests:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # K8s GPU tests
+      - request-k8-tests:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-single-gpu
-  #         context: gcp-ci
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-k8-tests
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["e2e-gpu"]
-  #             mark: ["e2e_gpu"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
+      - test-e2e-gke:
+          name: test-e2e-gke-single-gpu
+          context: gcp-ci
+          filters: *upstream-feature-branch
+          requires:
+            - request-k8-tests
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["e2e-gpu"]
+              mark: ["e2e_gpu"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
 
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-parallel
-  #         context: gcp-ci
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-k8-tests
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["parallel"]
-  #             mark: ["parallel"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             machine-type: ["n1-standard-32"]
-  #             gpus-per-machine: [4]
-  #             num-machines: [2]
+      - test-e2e-gke:
+          name: test-e2e-gke-parallel
+          context: gcp-ci
+          filters: *upstream-feature-branch
+          requires:
+            - request-k8-tests
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["parallel"]
+              mark: ["parallel"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              machine-type: ["n1-standard-32"]
+              gpus-per-machine: [4]
+              num-machines: [2]
 
-  #     # Requestable legacy tf 2.4 tests.
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-single-gpu-tfonly
-  #         context: gcp-ci
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-k8-tests
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["e2e-gpu-tfonly"]
-  #             mark: ["e2e_gpu and tensorflow2"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             environment-image:
-  #               - determinedai/environments:cuda-11.1-pytorch-1.9-tf-2.4-gpu-0.19.10
+      # Requestable legacy tf 2.4 tests.
+      - test-e2e-gke:
+          name: test-e2e-gke-single-gpu-tfonly
+          context: gcp-ci
+          filters: *upstream-feature-branch
+          requires:
+            - request-k8-tests
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["e2e-gpu-tfonly"]
+              mark: ["e2e_gpu and tensorflow2"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              environment-image:
+                - determinedai/environments:cuda-11.1-pytorch-1.9-tf-2.4-gpu-0.19.10
 
-  #     # K8s CPU tests
-  #     - request-k8-tests-cpu:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # K8s CPU tests
+      - request-k8-tests-cpu:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-single-cpu
-  #         context: gcp-ci
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-k8-tests-cpu
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["e2e-cpu"]
-  #             mark: ["e2e_gpu and not gpu_required"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             machine-type: ["n1-standard-8"]
-  #             gpus-per-machine: [0]
-  #             environment-gpu-enabled: ["0"]
-  #             slot-type: ["cpu"]
-  #             slot-resource-requests-cpu: [7]
+      - test-e2e-gke:
+          name: test-e2e-gke-single-cpu
+          context: gcp-ci
+          filters: *upstream-feature-branch
+          requires:
+            - request-k8-tests-cpu
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["e2e-cpu"]
+              mark: ["e2e_gpu and not gpu_required"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              machine-type: ["n1-standard-8"]
+              gpus-per-machine: [0]
+              environment-gpu-enabled: ["0"]
+              slot-type: ["cpu"]
+              slot-resource-requests-cpu: [7]
 
-  #     - test-e2e-gke:
-  #         name: test-e2e-gke-k8s-reattach
-  #         context: gcp-ci
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-k8-tests-cpu
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["e2e-k8s"]
-  #             mark: ["e2e_k8s"]
-  #             parallelism: [1]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             machine-type: ["n1-standard-8"]
-  #             gpus-per-machine: [0]
-  #             environment-gpu-enabled: ["0"]
-  #             slot-type: ["cpu"]
-  #             slot-resource-requests-cpu: [7]
-  #             accel-node-taints: ["accel=truth:NoSchedule"]
+      - test-e2e-gke:
+          name: test-e2e-gke-k8s-reattach
+          context: gcp-ci
+          filters: *upstream-feature-branch
+          requires:
+            - request-k8-tests-cpu
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["e2e-k8s"]
+              mark: ["e2e_k8s"]
+              parallelism: [1]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              machine-type: ["n1-standard-8"]
+              gpus-per-machine: [0]
+              environment-gpu-enabled: ["0"]
+              slot-type: ["cpu"]
+              slot-resource-requests-cpu: [7]
+              accel-node-taints: ["accel=truth:NoSchedule"]
 
-  #     # Nightly distributed tests
-  #     - request-gpu-distributed-nightly:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # Nightly distributed tests
+      - request-gpu-distributed-nightly:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-distributed-nightly
-  #         context:
-  #           - aws
-  #           - hugging-face
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-gpu-distributed-nightly
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["distributed"]
-  #             mark: ["distributed"]
-  #             compute-agent-instance-type: ["g4dn.metal"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             max-dynamic-agents: [2]
+      - test-e2e-aws:
+          name: test-e2e-gpu-distributed-nightly
+          context:
+            - aws
+            - hugging-face
+          filters: *upstream-feature-branch
+          requires:
+            - request-gpu-distributed-nightly
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              cluster-id-prefix: ["distributed"]
+              mark: ["distributed"]
+              compute-agent-instance-type: ["g4dn.metal"]
+              aux-agent-instance-type: ["m5.large"]
+              max-dynamic-agents: [2]
 
-  #     # Nightly tests
-  #     - request-gpu-nightly:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # Nightly tests
+      - request-gpu-nightly:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-nightly
-  #         context: aws
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-gpu-nightly
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             parallelism: [2]
-  #             cluster-id-prefix: ["nightly"]
-  #             mark: ["nightly"]
+      - test-e2e-aws:
+          name: test-e2e-gpu-nightly
+          context: aws
+          filters: *upstream-feature-branch
+          requires:
+            - request-gpu-nightly
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              parallelism: [2]
+              cluster-id-prefix: ["nightly"]
+              mark: ["nightly"]
 
-  #     # GPU tests
-  #     - request-gpu-tests:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # GPU tests
+      - request-gpu-tests:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-parallel
-  #         context: aws
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-gpu-tests
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             parallelism: [2]
-  #             compute-agent-instance-type: ["g4dn.metal"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             cluster-id-prefix: ["parallel"]
-  #             mark: ["parallel"]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
+      - test-e2e-aws:
+          name: test-e2e-gpu-parallel
+          context: aws
+          filters: *upstream-feature-branch
+          requires:
+            - request-gpu-tests
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              parallelism: [2]
+              compute-agent-instance-type: ["g4dn.metal"]
+              aux-agent-instance-type: ["m5.large"]
+              cluster-id-prefix: ["parallel"]
+              mark: ["parallel"]
+              slack-mentions: ["${SLACK_USER_ID}"]
 
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-single
-  #         context: aws
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-gpu-tests
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             parallelism: [2]
-  #             cluster-id-prefix: ["e2e-gpu"]
-  #             enable-tls: [true]
-  #             mark: ["e2e_gpu"]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
+      - test-e2e-aws:
+          name: test-e2e-gpu-single
+          context: aws
+          filters: *upstream-feature-branch
+          requires:
+            - request-gpu-tests
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              parallelism: [2]
+              cluster-id-prefix: ["e2e-gpu"]
+              enable-tls: [true]
+              mark: ["e2e_gpu"]
+              slack-mentions: ["${SLACK_USER_ID}"]
 
-  #     # mmdetection tests
-  #     - request-mmdetection-tests:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # mmdetection tests
+      - request-mmdetection-tests:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #     - test-e2e-aws:
-  #         name: test-e2e-mmdetection
-  #         context: aws
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-mmdetection-tests
-  #           - package-and-push-system-dev
-  #         matrix:
-  #           parameters:
-  #             compute-agent-instance-type: ["g4dn.metal"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             cluster-id-prefix: ["mmdetection"]
-  #             mark: ["model_hub_mmdetection"]
-  #             slack-mentions: ["${SLACK_USER_ID}"]
-  #             max-dynamic-agents: [2]
+      - test-e2e-aws:
+          name: test-e2e-mmdetection
+          context: aws
+          filters: *upstream-feature-branch
+          requires:
+            - request-mmdetection-tests
+            - package-and-push-system-dev
+          matrix:
+            parameters:
+              compute-agent-instance-type: ["g4dn.metal"]
+              aux-agent-instance-type: ["m5.large"]
+              cluster-id-prefix: ["mmdetection"]
+              mark: ["model_hub_mmdetection"]
+              slack-mentions: ["${SLACK_USER_ID}"]
+              max-dynamic-agents: [2]
 
-  #     # packaging tests
-  #     - request-packaging-tests:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # packaging tests
+      - request-packaging-tests:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #     - package-and-push-system-local:
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - build-react
-  #           - build-docs
-  #           - request-packaging-tests
+      - package-and-push-system-local:
+          filters: *upstream-feature-branch
+          requires:
+            - build-react
+            - build-docs
+            - request-packaging-tests
 
-  #     - test-debian-packaging:
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - package-and-push-system-local
-  #           - request-packaging-tests
+      - test-debian-packaging:
+          filters: *upstream-feature-branch
+          requires:
+            - package-and-push-system-local
+            - request-packaging-tests
 
-  #     # Request AWS FS tests
-  #     - request-aws-fs-tests:
-  #         type: approval
-  #         filters: *upstream-feature-branch
+      # Request AWS FS tests
+      - request-aws-fs-tests:
+          type: approval
+          filters: *upstream-feature-branch
 
-  #     - test-aws-fs:
-  #         name: test-aws-fs-fsx
-  #         context: aws
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-aws-fs-tests
-  #           - package-and-push-system-dev
-  #         cluster-id-prefix: aws-fs-fsx
-  #         deployment-type: fsx
-  #         slack-mentions: "${SLACK_USER_ID}"
+      - test-aws-fs:
+          name: test-aws-fs-fsx
+          context: aws
+          filters: *upstream-feature-branch
+          requires:
+            - request-aws-fs-tests
+            - package-and-push-system-dev
+          cluster-id-prefix: aws-fs-fsx
+          deployment-type: fsx
+          slack-mentions: "${SLACK_USER_ID}"
 
-  #     - test-aws-fs:
-  #         name: test-aws-fs-efs
-  #         context: aws
-  #         filters: *upstream-feature-branch
-  #         requires:
-  #           - request-aws-fs-tests
-  #           - package-and-push-system-dev
-  #         cluster-id-prefix: aws-fs-efs
-  #         deployment-type: efs
-  #         slack-mentions: "${SLACK_USER_ID}"
+      - test-aws-fs:
+          name: test-aws-fs-efs
+          context: aws
+          filters: *upstream-feature-branch
+          requires:
+            - request-aws-fs-tests
+            - package-and-push-system-dev
+          cluster-id-prefix: aws-fs-efs
+          deployment-type: efs
+          slack-mentions: "${SLACK_USER_ID}"
 
-  # nightly:
-  #   when: << pipeline.parameters.do_nightly_tests >>
-  #   jobs:
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-nightly
-  #         context: aws
-  #         matrix:
-  #           parameters:
-  #             parallelism: [2]
-  #             cluster-id-prefix: ["nightly"]
-  #             mark: ["nightly"]
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-distributed
-  #         context:
-  #           - aws
-  #           - hugging-face
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["distributed"]
-  #             mark: ["distributed"]
-  #             compute-agent-instance-type: ["g4dn.metal"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             max-dynamic-agents: [2]
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-mmdetection
-  #         context: aws
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["mmdet"]
-  #             mark: ["model_hub_mmdetection"]
-  #             compute-agent-instance-type: ["g4dn.metal"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             max-dynamic-agents: [2]
-  #     - test-e2e-aws:
-  #         name: test-e2e-gpu-deepspeed
-  #         context: aws
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["deepspeed"]
-  #             mark: ["deepspeed"]
-  #             compute-agent-instance-type: ["g4dn.12xlarge"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             max-dynamic-agents: [2]
-  #     - test-e2e-aws:
-  #         name: test-e2e-cpu-distributed
-  #         context: aws
-  #         matrix:
-  #           parameters:
-  #             cluster-id-prefix: ["distributed"]
-  #             mark: ["distributed and not gpu_required"]
-  #             compute-agent-instance-type: ["c5.2xlarge"]
-  #             environment-gpu-enabled: ["0"]
-  #             aux-agent-instance-type: ["m5.large"]
-  #             max-dynamic-agents: [16]
-  #     - test-aws-fs:
-  #         name: test-aws-fs-fsx
-  #         context: aws
-  #         cluster-id-prefix: aws-fs-fsx
-  #         deployment-type: fsx
-  #         slack-mentions: "${SLACK_USER_ID}"
+  nightly:
+    when: << pipeline.parameters.do_nightly_tests >>
+    jobs:
+      - test-e2e-aws:
+          name: test-e2e-gpu-nightly
+          context: aws
+          matrix:
+            parameters:
+              parallelism: [2]
+              cluster-id-prefix: ["nightly"]
+              mark: ["nightly"]
+      - test-e2e-aws:
+          name: test-e2e-gpu-distributed
+          context:
+            - aws
+            - hugging-face
+          matrix:
+            parameters:
+              cluster-id-prefix: ["distributed"]
+              mark: ["distributed"]
+              compute-agent-instance-type: ["g4dn.metal"]
+              aux-agent-instance-type: ["m5.large"]
+              max-dynamic-agents: [2]
+      - test-e2e-aws:
+          name: test-e2e-gpu-mmdetection
+          context: aws
+          matrix:
+            parameters:
+              cluster-id-prefix: ["mmdet"]
+              mark: ["model_hub_mmdetection"]
+              compute-agent-instance-type: ["g4dn.metal"]
+              aux-agent-instance-type: ["m5.large"]
+              max-dynamic-agents: [2]
+      - test-e2e-aws:
+          name: test-e2e-gpu-deepspeed
+          context: aws
+          matrix:
+            parameters:
+              cluster-id-prefix: ["deepspeed"]
+              mark: ["deepspeed"]
+              compute-agent-instance-type: ["g4dn.12xlarge"]
+              aux-agent-instance-type: ["m5.large"]
+              max-dynamic-agents: [2]
+      - test-e2e-aws:
+          name: test-e2e-cpu-distributed
+          context: aws
+          matrix:
+            parameters:
+              cluster-id-prefix: ["distributed"]
+              mark: ["distributed and not gpu_required"]
+              compute-agent-instance-type: ["c5.2xlarge"]
+              environment-gpu-enabled: ["0"]
+              aux-agent-instance-type: ["m5.large"]
+              max-dynamic-agents: [16]
+      - test-aws-fs:
+          name: test-aws-fs-fsx
+          context: aws
+          cluster-id-prefix: aws-fs-fsx
+          deployment-type: fsx
+          slack-mentions: "${SLACK_USER_ID}"
 
-  #     - test-aws-fs:
-  #         name: test-aws-fs-efs
-  #         context: aws
-  #         cluster-id-prefix: aws-fs-efs
-  #         deployment-type: efs
-  #         slack-mentions: "${SLACK_USER_ID}"
+      - test-aws-fs:
+          name: test-aws-fs-efs
+          context: aws
+          cluster-id-prefix: aws-fs-efs
+          deployment-type: efs
+          slack-mentions: "${SLACK_USER_ID}"
 
   release:
     jobs:
