@@ -7,11 +7,27 @@ coverage:
     project:
       default:
         informational: true
+      backend:
+        target: 37%
+        threshold: 3%
+        flags: 
+          - backend
     patch:
       default:
         informational: true
+      backend: 
+        target: 85%
+        threshold: 5%
+        flags: 
+          - backend
+
+flags:
+  backend:
+    carryforward: true
 
 github_checks:
   annotations: false
 
-comment: false
+comment: 
+  layout: "diff, flags, files"
+  behavior: default
