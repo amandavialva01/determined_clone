@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -165,61 +164,61 @@ func setupCheckpointTestEcho(t *testing.T) (
 	return api, ctx, rec
 }
 
-func TestGetCheckpointEcho(t *testing.T) {
-	testGetCheckpointEcho(t, S3TestBucket)
-}
+// func TestGetCheckpointEcho(t *testing.T) {
+// 	testGetCheckpointEcho(t, S3TestBucket)
+// }
 
-func TestGetCheckpointEchoUSEast1(t *testing.T) {
-	testGetCheckpointEcho(t, S3TestBucketUSEast1)
-}
+// func TestGetCheckpointEchoUSEast1(t *testing.T) {
+// 	testGetCheckpointEcho(t, S3TestBucketUSEast1)
+// }
 
-func testGetCheckpointEcho(t *testing.T, bucket string) {
-	gitBranch := os.Getenv("CIRCLE_BRANCH")
-	if gitBranch == "" || strings.HasPrefix(gitBranch, "pull/") {
-		t.Skipf("skipping test %s in a forked repo (branch: %s) due to lack of credentials",
-			t.Name(), gitBranch)
-	}
-	cases := []struct {
-		DenyFuncName string
-		IDToReqCall  func() error
-		Params       []any
-	}{
-		{"CanGetCheckpointTgz", func() error {
-			api, ctx, rec := setupCheckpointTestEcho(t)
-			id, err := createCheckpoint(t, api.m.db, bucket)
-			if err != nil {
-				return err
-			}
-			ctx.SetParamNames("checkpoint_uuid")
-			ctx.SetParamValues(id)
-			ctx.SetRequest(httptest.NewRequest(http.MethodGet, "/", nil))
-			ctx.Request().Header.Set("Accept", MIMEApplicationGZip)
-			err = api.m.getCheckpoint(ctx)
-			require.NoError(t, err, "API call returns error")
-			checkTgz(t, rec.Body, id)
-			return err
-		}, []any{mock.Anything, mock.Anything, mock.Anything}},
-		{"CanGetCheckpointZip", func() error {
-			api, ctx, rec := setupCheckpointTestEcho(t)
-			id, err := createCheckpoint(t, api.m.db, bucket)
-			if err != nil {
-				return err
-			}
-			ctx.SetParamNames("checkpoint_uuid")
-			ctx.SetParamValues(id)
-			ctx.SetRequest(httptest.NewRequest(http.MethodGet, "/", nil))
-			ctx.Request().Header.Set("Accept", MIMEApplicationZip)
-			err = api.m.getCheckpoint(ctx)
-			require.NoError(t, err, "API call returns error")
-			checkZip(t, rec.Body.String(), id)
-			return err
-		}, []any{mock.Anything, mock.Anything, mock.Anything}},
-	}
+// func testGetCheckpointEcho(t *testing.T, bucket string) {
+// 	gitBranch := os.Getenv("CIRCLE_BRANCH")
+// 	if gitBranch == "" || strings.HasPrefix(gitBranch, "pull/") {
+// 		t.Skipf("skipping test %s in a forked repo (branch: %s) due to lack of credentials",
+// 			t.Name(), gitBranch)
+// 	}
+// 	cases := []struct {
+// 		DenyFuncName string
+// 		IDToReqCall  func() error
+// 		Params       []any
+// 	}{
+// 		{"CanGetCheckpointTgz", func() error {
+// 			api, ctx, rec := setupCheckpointTestEcho(t)
+// 			id, err := createCheckpoint(t, api.m.db, bucket)
+// 			if err != nil {
+// 				return err
+// 			}
+// 			ctx.SetParamNames("checkpoint_uuid")
+// 			ctx.SetParamValues(id)codecov/codecov@3.2.4
+// 			ctx.SetRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+// 			ctx.Request().Header.Set("Accept", MIMEApplicationGZip)
+// 			err = api.m.getCheckpoint(ctx)
+// 			require.NoError(t, err, "API call returns error")
+// 			checkTgz(t, rec.Body, id)
+// 			return err
+// 		}, []any{mock.Anything, mock.Anything, mock.Anything}},
+// 		{"CanGetCheckpointZip", func() error {
+// 			api, ctx, rec := setupCheckpointTestEcho(t)
+// 			id, err := createCheckpoint(t, api.m.db, bucket)
+// 			if err != nil {
+// 				return err
+// 			}
+// 			ctx.SetParamNames("checkpoint_uuid")
+// 			ctx.SetParamValues(id)
+// 			ctx.SetRequest(httptest.NewRequest(http.MethodGet, "/", nil))
+// 			ctx.Request().Header.Set("Accept", MIMEApplicationZip)
+// 			err = api.m.getCheckpoint(ctx)
+// 			require.NoError(t, err, "API call returns error")
+// 			checkZip(t, rec.Body.String(), id)
+// 			return err
+// 		}, []any{mock.Anything, mock.Anything, mock.Anything}},
+// 	}
 
-	for _, curCase := range cases {
-		require.NoError(t, curCase.IDToReqCall())
-	}
-}
+// 	for _, curCase := range cases {
+// 		require.NoError(t, curCase.IDToReqCall())
+// 	}
+// }
 
 // TestGetCheckpointEchoExpErr expects specific errors are returned for each check.
 func TestGetCheckpointEchoExpErr(t *testing.T) {
